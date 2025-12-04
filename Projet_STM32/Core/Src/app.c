@@ -27,7 +27,7 @@ void init_device(void){
 //
 // Initialisation motor control
 	// MOTOR
-//	motor_init();
+	motor_init();
 	// ASSERV (PID)
 //	asserv_init();
 //
