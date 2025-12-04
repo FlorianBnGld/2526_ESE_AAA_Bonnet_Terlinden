@@ -40,3 +40,12 @@ On crée deffirentes pwm d'une fréquence de 20kHz:
 
 - ![Visualisation de 4 pwm](ressource/sonde4signal.png)  
 	*Figure 4 — Visualisation de 4 pwm à 60%(fichier `ressource/sonde4signal.png`).*
+
+Il faut encore ajouter le temps mort entre les signaux complémentaires. On trouve dans la data sheet du driver de gate IRF540N:
+- ![IR540N Timing](ressource/timeout_IRF540.jpg)  
+    *Figure 5 — Timing IRF540N(fichier `ressource/timeout_IRF540.jpg`).*
+
+On peut seléctionner dans CubeMX dans les paramètres avancés du timer le temps mort à ajouter (120 ns minimum). On choisit 200ns ce qui corespond à 34 ticks du timer à 170MHz.
+
+- ![IR540N Timing](ressource/deadtime.png)  
+    *Figure 5 — deadtime(fichier `ressource/deadtime.png`).*
