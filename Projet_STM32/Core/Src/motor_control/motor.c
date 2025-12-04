@@ -27,8 +27,17 @@ int motor_control(h_shell_t* h_shell, int argc, char** argv)
 	int alpha_input = atoi(argv[1]);
 
 	//Clamping
-	if (alpha_input > 100) alpha_input = 100;
-	if (alpha_input < 0) alpha_input = 0;
+
+	if (alpha_input > 100) {
+		size = snprintf(h_shell->print_buffer, SHELL_PRINT_BUFFER_SIZE, "Erreur: Entrez un rapport (0-100)\r\n");
+		h_shell->drv.transmit(h_shell->print_buffer, size);
+		return -1;
+	}
+	if (alpha_input < 0) {
+		size = snprintf(h_shell->print_buffer, SHELL_PRINT_BUFFER_SIZE, "Erreur: Entrez un rapport (0-100)\r\n");
+		h_shell->drv.transmit(h_shell->print_buffer, size);
+		return -1;
+	}
 
 
 	uint32_t pulse_ch1 = (alpha_input * ARR) / 100;
