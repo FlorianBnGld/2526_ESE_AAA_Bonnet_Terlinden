@@ -18,7 +18,7 @@ Voici les deux schémas de brochage utilisés pour le projet :
 	*Figure 2 — Pinout gauche(fichier `ressource/pinout2.jpg`).*
 
 - ![Chip Pinout](ressource/chippinout.jpg)  
-	*Figure 2 — Pinout de la chip(fichier `ressource/chippinout.jpg`).*
+	*Figure 3 — Pinout de la chip(fichier `ressource/chippinout.jpg`).*
 
 ## Commande MCC basique
 
@@ -30,3 +30,13 @@ Objectifs :
 - Prendre en main le hacheur,
 - Faire un premier essai de commande moteur.
 
+On crée deffirentes pwm d'une fréquence de 20kHz:
+
+- ![Visualisation d'une pwm](ressource/sonde1signal.png)  
+	*Figure 4 — Visualisation d'une pwm sur TIM_CHANNEL_1 à 60%(fichier `ressource/sonde1signal.png`).*
+
+- ![Visualisation de 2 pwm](ressource/sonde2signal.png)  
+	*Figure 4 — Visualisation d'une pwm sur TIM_CHANNEL_1 et de sa complémentaire TIM_CHANNEL_1N à 60%(fichier `ressource/sonde2signal.png`).*
+
+- ![Visualisation de 4 pwm](ressource/sonde4signal.png)  
+	*Figure 4 — Visualisation de 4 pwm à 60%(fichier `ressource/sonde4signal.png`).*
