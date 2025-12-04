@@ -1,2 +1,2 @@
-../Core/Src/motor_control/motor.c:12:5:motor_init	8	static
-../Core/Src/motor_control/motor.c:16:5:motor_control	32	static
+../Core/Src/motor_control/motor.c:13:5:motor_init	8	static
+../Core/Src/motor_control/motor.c:17:5:motor_control	56	static
