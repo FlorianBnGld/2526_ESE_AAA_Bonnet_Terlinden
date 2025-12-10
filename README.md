@@ -48,4 +48,70 @@ Il faut encore ajouter le temps mort entre les signaux complémentaires. On trou
 On peut seléctionner dans CubeMX dans les paramètres avancés du timer le temps mort à ajouter (120 ns minimum). On choisit 200ns ce qui corespond à 34 ticks du timer à 170MHz.
 
 - ![IR540N Timing](ressource/deadtime.png)  
-    *Figure 5 — deadtime(fichier `ressource/deadtime.png`).*
+    *Figure 5 — deadtime de 200ns à l'oscilloscope(fichier `ressource/deadtime.png`).*
+
+Voici le code de notre fonction de commande moteur:
+
+```c
+int motor_control(h_shell_t* h_shell, int argc, char** argv)
+{
+	int size;
+
+	//Sécurité
+	if (argc < 2) {
+		size = snprintf(h_shell->print_buffer, SHELL_PRINT_BUFFER_SIZE, "Erreur: Entrez un rapport (0-100)\r\n");
+		h_shell->drv.transmit(h_shell->print_buffer, size);
+		return -1;
+	}
+	int alpha_input = atoi(argv[1]);
+
+	//Clamping
+
+	if (alpha_input > 100) {
+		size = snprintf(h_shell->print_buffer, SHELL_PRINT_BUFFER_SIZE, "Erreur: Entrez un rapport (0-100)\r\n");
+		h_shell->drv.transmit(h_shell->print_buffer, size);
+		return -1;
+	}
+	if (alpha_input < 0) {
+		size = snprintf(h_shell->print_buffer, SHELL_PRINT_BUFFER_SIZE, "Erreur: Entrez un rapport (0-100)\r\n");
+		h_shell->drv.transmit(h_shell->print_buffer, size);
+		return -1;
+	}
+
+
+	uint32_t pulse_ch1 = (alpha_input * ARR) / 100;
+	uint32_t pulse_ch2 = ((100 - alpha_input) * ARR) / 100;
+
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+	HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
+
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+	HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
+
+
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, pulse_ch1);
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, pulse_ch2);
+
+	size = snprintf(h_shell->print_buffer, SHELL_PRINT_BUFFER_SIZE,
+			"PWM Set: CH1=%d%% (%lu), CH2=%d%% (%lu)\r\n",
+			alpha_input, pulse_ch1, (100-alpha_input), pulse_ch2);
+	h_shell->drv.transmit(h_shell->print_buffer, size);
+
+	return 0;
+}
+```
+
+On fait quelques tests sur le shell:
+```
+=> Monsieur Shell v0.2.2 without FreeRTOS <=
+MSC@SAC-TP:/motor 50
+PWM Set: CH1=50% (2125), CH2=50% (2125)
+MSC@SAC-TP:/motor 120
+Erreur: Entrez un rapport (0-100)
+MSC@SAC-TP:/motor 0
+PWM Set: CH1=0% (0), CH2=100% (4250)
+MSC@SAC-TP:/motor 10
+PWM Set: CH1=10% (425), CH2=90% (3825)
+MSC@SAC-TP:/motor 1293849309844
+Erreur: Entrez un rapport (0-100)
+```
