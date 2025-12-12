@@ -115,3 +115,123 @@ PWM Set: CH1=10% (425), CH2=90% (3825)
 MSC@SAC-TP:/motor 1293849309844
 Erreur: Entrez un rapport (0-100)
 ```
+
+On intègre ensuite des commande start et stop pour démarrer et arrêter les PWM:
+
+```
+MSC@SAC-TP:/start
+Moteur démarré : PWM CH1/CH2 initialisé à 50%.
+MSC@SAC-TP:/stop
+Moteur arrêté : PWM CH1/CH2 stoppé.
+```
+
+# Commande en boucle ouverte, mesure de Vitesse et de courant
+
+## Mesure de courant
+
+On utilise la pin PA1 pour la mesure de courant sur U. 
+- ![Mesure de courant](ressource/pincourant.jpg)  
+	*Figure 6 — Pin de mesure de courant(fichier `ressource/pincourant.jpg`).*
+
+On trouve dans la datasheet du capteur de courant:
+- ![Capteur de courant](ressource/datasheetcapteur.jpg)  
+	*Figure 7 — Datasheet du capteur de courant(fichier `ressource/datasheetcapteur.jpg`).*
+La fonction de lecture du courant est la suivante:
+\[
+U_{\text{out}}(I_{mes}) \approx 1.65\,\text{V} + 0.05\,\text{V/A} \cdot I_{mes}
+\]
+Donc on en déduit:
+\[
+I_{mes} \approx \frac{U_{\text{out}} - 1.65\,\text{V}}{0.05\,\text{V/A}}
+\]
+
+On doit réaliser une fonction de calibration de l'adc pour mesurer le courant. Pour cela on réalise une moyenne de 100 mesures pour avoir une valeur stable du offset à 0A.
+
+```c
+float calibrate_current_zero(void)
+{
+    float total_u_out = 0.0f;
+    uint32_t adc_raw_value;
+    float u_out_volts;
+
+    for (int i = 0; i < CALIBRATION_SAMPLES; i++)
+    {
+        if (HAL_ADC_Start(&hadc1) == HAL_OK)
+        {
+            if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
+            {
+                if (HAL_ADC_GetState(&hadc1) & HAL_ADC_STATE_REG_EOC)
+                {
+                    adc_raw_value = HAL_ADC_GetValue(&hadc1);
+                    u_out_volts = ((float)adc_raw_value / ADC_MAX_VALUE) * VREF_VOLTS;
+                    total_u_out += u_out_volts;
+                }
+            }
+            HAL_ADC_Stop(&hadc1);
+        }
+    }
+    g_calibrated_offset_volts = total_u_out / CALIBRATION_SAMPLES;
+    printf("Courant de calibration : %f A\r\n", g_calibrated_offset_volts);
+    return g_calibrated_offset_volts;
+}
+```
+
+On réalise ensuite la fonction de lecture du courant:
+
+```c
+float read_current_polling()
+{
+    uint32_t adc_raw_value = 0;
+    float u_out_volts = 0.0f;
+    float imes_amperes = 0.0f;
+
+
+    if (HAL_ADC_Start(&hadc1) != HAL_OK)
+	{
+		// Gerer l'erreur de demarrage
+		return -999.0f;
+	}
+
+	if (HAL_ADC_PollForConversion(&hadc1, 100) != HAL_OK)
+	{
+		HAL_ADC_Stop(&hadc1);
+		return -999.0f;
+	}
+
+    if (HAL_ADC_GetState(&hadc1) & HAL_ADC_STATE_REG_EOC)
+    {
+        adc_raw_value = HAL_ADC_GetValue(&hadc1);
+    }
+
+    HAL_ADC_Stop(&hadc1);
+
+    // Uout = V_ADC * (Vref / (2^N - 1))
+    u_out_volts = ((float)adc_raw_value / ADC_MAX_VALUE) * VREF_VOLTS;
+
+    // Imes = (Uout - 1.65V) / (0.05V/A)
+    imes_amperes = (u_out_volts - g_calibrated_offset_volts) / SENSITIVITY_V_PER_A;
+    printf("Courant : %f A\r\n", imes_amperes);
+    printf("Raw : %d \r\n", adc_raw_value);
+    return imes_amperes;
+}
+```
+
+On obtient:
+```
+=> Monsieur Shell v0.2.2 without FreeRTOS <=
+MSC@SAC-TP:/Courant de calibration : 1.608070 A
+Courant : 0.282545 A
+Raw : 2013
+Courant : 0.169725 A
+Raw : 2006
+Courant : 0.040789 A
+Raw : 1998
+Courant : 0.234194 A
+Raw : 2010
+Courant : -0.152619 A
+Raw : 1986
+Courant : -0.168736 A
+Raw : 1985
+Courant : 0.185843 A
+Raw : 2007
+```
