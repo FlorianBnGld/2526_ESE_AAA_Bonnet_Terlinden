@@ -148,13 +148,72 @@ I_{mes} \approx \frac{U_{\text{out}} - 1.65\,\text{V}}{0.05\,\text{V/A}}
 On doit réaliser une fonction de calibration de l'adc pour mesurer le courant. Pour cela on réalise une moyenne de 100 mesures pour avoir une valeur stable du offset à 0A.
 
 ```c
+float calibrate_current_zero(void)
+{
+    float total_u_out = 0.0f;
+    uint32_t adc_raw_value;
+    float u_out_volts;
 
+    for (int i = 0; i < CALIBRATION_SAMPLES; i++)
+    {
+        if (HAL_ADC_Start(&hadc1) == HAL_OK)
+        {
+            if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
+            {
+                if (HAL_ADC_GetState(&hadc1) & HAL_ADC_STATE_REG_EOC)
+                {
+                    adc_raw_value = HAL_ADC_GetValue(&hadc1);
+                    u_out_volts = ((float)adc_raw_value / ADC_MAX_VALUE) * VREF_VOLTS;
+                    total_u_out += u_out_volts;
+                }
+            }
+            HAL_ADC_Stop(&hadc1);
+        }
+    }
+    g_calibrated_offset_volts = total_u_out / CALIBRATION_SAMPLES;
+    printf("Courant de calibration : %f A\r\n", g_calibrated_offset_volts);
+    return g_calibrated_offset_volts;
+}
 ```
 
 On réalise ensuite la fonction de lecture du courant:
 
 ```c
+float read_current_polling()
+{
+    uint32_t adc_raw_value = 0;
+    float u_out_volts = 0.0f;
+    float imes_amperes = 0.0f;
 
+
+    if (HAL_ADC_Start(&hadc1) != HAL_OK)
+	{
+		// Gerer l'erreur de demarrage
+		return -999.0f;
+	}
+
+	if (HAL_ADC_PollForConversion(&hadc1, 100) != HAL_OK)
+	{
+		HAL_ADC_Stop(&hadc1);
+		return -999.0f;
+	}
+
+    if (HAL_ADC_GetState(&hadc1) & HAL_ADC_STATE_REG_EOC)
+    {
+        adc_raw_value = HAL_ADC_GetValue(&hadc1);
+    }
+
+    HAL_ADC_Stop(&hadc1);
+
+    // Uout = V_ADC * (Vref / (2^N - 1))
+    u_out_volts = ((float)adc_raw_value / ADC_MAX_VALUE) * VREF_VOLTS;
+
+    // Imes = (Uout - 1.65V) / (0.05V/A)
+    imes_amperes = (u_out_volts - g_calibrated_offset_volts) / SENSITIVITY_V_PER_A;
+    printf("Courant : %f A\r\n", imes_amperes);
+    printf("Raw : %d \r\n", adc_raw_value);
+    return imes_amperes;
+}
 ```
 
 On obtient:
