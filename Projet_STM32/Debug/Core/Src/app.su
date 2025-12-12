@@ -1,5 +1,11 @@
-../Core/Src/app.c:14:6:init_device	8	static
-../Core/Src/app.c:41:9:shell_uart2_transmit	16	static
-../Core/Src/app.c:47:9:shell_uart2_receive	16	static
-../Core/Src/app.c:53:6:HAL_UART_RxCpltCallback	16	static
-../Core/Src/app.c:61:6:loop	4	static
+../Core/Src/app.c:26:6:init_device	8	static
+../Core/Src/app.c:54:7:calibrate_current_zero	24	static
+../Core/Src/app.c:81:6:HAL_ADC_ConvCpltCallback	24	static
+../Core/Src/app.c:94:7:read_current_dma	4	static
+../Core/Src/app.c:101:6:analog_init	8	static
+../Core/Src/app.c:112:7:read_current_polling	24	static
+../Core/Src/app.c:152:5:start_adc_dma_acquisition	8	static
+../Core/Src/app.c:174:9:shell_uart2_transmit	16	static
+../Core/Src/app.c:180:9:shell_uart2_receive	16	static
+../Core/Src/app.c:186:6:HAL_UART_RxCpltCallback	16	static
+../Core/Src/app.c:198:6:loop	8	static

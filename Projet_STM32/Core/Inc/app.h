@@ -10,6 +10,8 @@
 
 #include "stm32g4xx_hal.h"
 #include "usart.h"
+#include <stdint.h>
+#include <math.h>
 
 void init_device();
 void loop();

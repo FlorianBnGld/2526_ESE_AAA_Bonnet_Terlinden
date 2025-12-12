@@ -1,2 +1,4 @@
 ../Core/Src/motor_control/motor.c:13:5:motor_init	1
-../Core/Src/motor_control/motor.c:17:5:motor_control	4
+../Core/Src/motor_control/motor.c:21:5:motor_control	4
+../Core/Src/motor_control/motor.c:68:5:motor_start	1
+../Core/Src/motor_control/motor.c:88:5:motor_stop	1
