@@ -235,3 +235,42 @@ Raw : 1985
 Courant : 0.185843 A
 Raw : 2007
 ```
+On peut ensuite réaliser la mesure à l'aide du DMA pour ne pas bloquer le CPU pendant l'acquisition.
+
+## Mesure de vitesse
+
+D'après le schéma de brochage, on utilise les pin PA4 (encodeur B) et PA6 (encodeur A) pour la mesure de vitesse.
+
+Nous devons calculer la constante de temps mécanique du moteur. Pour cela, on réalise une expérience en boucle ouverte en relevant la vitesse à différentes tensions d'alimentation:
+![Vitesse en boucle ouverte](ressource/mesuretau.jpg)  
+	*Figure 8 — Mesure de la vitesse en boucle ouverte(fichier `ressource/mesuretau.jpg`).*	
+
+On en déduit la constante de temps mécanique: 
+\[\tau_m = 2.0s\]
+
+La fonction de transfert H(p) du moteur s'écrit:
+
+$$
+H(p) = \frac{\Omega(p)}{U(p)} = \frac{K_{static}}{1 + \tau_m \cdot p}
+$$
+
+Où :
+* *$U(p)$* : La tension d'alimentation du moteur (en Volts).
+* *$\Omega(p)$* : La vitesse de rotation du moteur (en tr/s).
+* *$K_{static}$* : Le gain statique du moteur.
+* *$\tau_m$* : La constante de temps mécanique (en secondes).
+* *$p$* : La variable de Laplace.
+
+On peut calculer le gain statique du moteur avec la formule suivante:
+$$
+K_{static} = \frac{\Omega_{\infty}}{U_{0}}
+$$
+
+* *$\Omega_{\infty}$* : Vitesse en régime permanent, $ 3.4V * 100rpm/V = 340rpm$.
+* *$U_{0}$* : Tension de commande, ici 5V.
+
+On trouve:
+$$
+K_{static} = \frac{340rpm}{5V} = 68 \frac{rpm}{V}
+$$
+
