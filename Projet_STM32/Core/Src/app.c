@@ -74,6 +74,7 @@ float calibrate_current_zero(void)
         }
     }
     g_calibrated_offset_volts = total_u_out / CALIBRATION_SAMPLES;
+    printf("Courant raw initial : %f A\r\n", total_u_out);
     printf("Courant de calibration : %f A\r\n", g_calibrated_offset_volts);
     return g_calibrated_offset_volts;
 }
@@ -151,16 +152,18 @@ float read_current_polling()
 
 int start_adc_dma_acquisition(void)
 {
-    if (HAL_TIM_Base_Start(&htim1) != HAL_OK)
+	if (HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_dma_buffer, ADC_BUFFER_SIZE) != HAL_OK)
+	{
+		//HAL_TIM_Base_Stop(&htim1);
+		return -1;
+	}
+
+	if (HAL_TIM_Base_Start(&htim1) != HAL_OK)
     {
         return -1;
     }
 
-    if (HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_dma_buffer, ADC_BUFFER_SIZE) != HAL_OK)
-    {
-        HAL_TIM_Base_Stop(&htim1);
-        return -1;
-    }
+
 
     return 0;
 }
