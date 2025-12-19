@@ -14,7 +14,7 @@
 #define OFFSET_VOLTS 1.65f
 #define SENSITIVITY_V_PER_A 0.05f
 #define CALIBRATION_SAMPLES 100
-#define ADC_BUFFER_SIZE 1
+#define ADC_BUFFER_SIZE 16
 static float g_calibrated_offset_volts = 1.65f;
 extern ADC_HandleTypeDef hadc1;
 static char shell_uart2_received_char;
@@ -53,40 +53,49 @@ void init_device(void){
 
 float calibrate_current_zero(void)
 {
-    float total_u_out = 0.0f;
-    uint32_t adc_raw_value;
-    float u_out_volts;
+    // On s'assure que tout est arrêté avant de calibrer
+    HAL_ADC_Stop_DMA(&hadc1);
+    HAL_ADC_Stop(&hadc1);
+
+    uint32_t total_raw = 0;
+
+    // On lance l'ADC une seule fois
+    HAL_ADC_Start(&hadc1);
 
     for (int i = 0; i < CALIBRATION_SAMPLES; i++)
     {
-        if (HAL_ADC_Start(&hadc1) == HAL_OK)
+        if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
         {
-            if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
-            {
-                if (HAL_ADC_GetState(&hadc1) & HAL_ADC_STATE_REG_EOC)
-                {
-                    adc_raw_value = HAL_ADC_GetValue(&hadc1);
-                    u_out_volts = ((float)adc_raw_value / ADC_MAX_VALUE) * VREF_VOLTS;
-                    total_u_out += u_out_volts;
-                }
-            }
-            HAL_ADC_Stop(&hadc1);
+            total_raw += HAL_ADC_GetValue(&hadc1);
         }
+        HAL_Delay(1); // Petit délai pour laisser le signal se stabiliser
     }
-    g_calibrated_offset_volts = total_u_out / CALIBRATION_SAMPLES;
-    printf("Courant raw initial : %f A\r\n", total_u_out);
-    printf("Courant de calibration : %f A\r\n", g_calibrated_offset_volts);
+
+    HAL_ADC_Stop(&hadc1);
+
+    // Calcul de la moyenne
+    float raw_mean = (float)total_raw / CALIBRATION_SAMPLES;
+
+    // Mise à jour de l'offset global
+    g_calibrated_offset_volts = (raw_mean / ADC_MAX_VALUE) * VREF_VOLTS;
+
     return g_calibrated_offset_volts;
 }
 
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-    if(hadc->Instance == ADC1)
+    if (hadc->Instance == ADC1)
     {
-        uint32_t adc_raw_value;
-        float u_out_volts;
-        adc_raw_value = adc_dma_buffer[0];
-        u_out_volts = ((float)adc_raw_value / ADC_MAX_VALUE) * VREF_VOLTS;
+        uint32_t sum = 0;
+        for (uint8_t i = 0; i < ADC_BUFFER_SIZE; i++)
+        {
+            sum += adc_dma_buffer[i];
+        }
+
+        float adc_mean = (float)sum / ADC_BUFFER_SIZE;
+        float u_out_volts = (adc_mean / ADC_MAX_VALUE) * VREF_VOLTS;
+
         g_current_amperes = (u_out_volts - g_calibrated_offset_volts) / SENSITIVITY_V_PER_A;
     }
 }
@@ -101,6 +110,7 @@ float read_current_dma(void)
 
 void analog_init(void)
 {
+	HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
 	calibrate_current_zero();
 	start_adc_dma_acquisition();
 	read_current_dma();
@@ -152,19 +162,14 @@ float read_current_polling()
 
 int start_adc_dma_acquisition(void)
 {
-	if (HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_dma_buffer, ADC_BUFFER_SIZE) != HAL_OK)
-	{
-		//HAL_TIM_Base_Stop(&htim1);
-		return -1;
-	}
-
-	if (HAL_TIM_Base_Start(&htim1) != HAL_OK)
+    if (HAL_ADC_Start_DMA(&hadc1,
+                          (uint32_t*)adc_dma_buffer,
+                          ADC_BUFFER_SIZE) != HAL_OK)
     {
         return -1;
     }
 
-
-
+    HAL_TIM_Base_Start(&htim1);
     return 0;
 }
 
@@ -198,8 +203,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 
 
-void loop(){
-	read_current_polling();
-	HAL_Delay(500); // Lire toutes les 500 ms
-
+void loop(void)
+{
+    float current = read_current_dma();
+    printf("Courant moteur : %.2f A\r\n", current);
+    uint16_t raw = adc_dma_buffer[0];
+    printf("RAW ADC = %d\r\n", raw);
+    HAL_Delay(500);
 }
