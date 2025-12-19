@@ -82,6 +82,31 @@ float calibrate_current_zero(void)
     return g_calibrated_offset_volts;
 }
 
+void calibrate_current_zero_dma(void)
+{
+    // 1. On démarre le DMA et le Timer comme d'habitude
+    start_adc_dma_acquisition();
+
+    // 2. On attend un peu que le buffer se remplisse (ex: 100ms)
+    HAL_Delay(100);
+
+    // 3. On fait la moyenne du buffer qui est maintenant rempli de valeurs stables
+    uint32_t sum = 0;
+    for (int i = 0; i < ADC_BUFFER_SIZE; i++) {
+        sum += adc_dma_buffer[i];
+    }
+
+    float average_raw = (float)sum / ADC_BUFFER_SIZE;
+
+    // 4. On calcule l'offset basé sur cette moyenne
+    g_calibrated_offset_volts = (average_raw / ADC_MAX_VALUE) * VREF_VOLTS;
+
+    // Debug pour vérifier
+    printf("Calibration terminee.\r\n");
+    printf("Moyenne RAW: %.0f\r\n", average_raw); // Doit être ~1860
+    printf("Nouvel Offset: %.2f V\r\n", g_calibrated_offset_volts); // Doit être ~1.50V
+}
+
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
@@ -111,9 +136,9 @@ float read_current_dma(void)
 void analog_init(void)
 {
 	HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
-	calibrate_current_zero();
-	start_adc_dma_acquisition();
-	read_current_dma();
+	calibrate_current_zero_dma();
+	//start_adc_dma_acquisition();
+	//read_current_dma();
 }
 
 
